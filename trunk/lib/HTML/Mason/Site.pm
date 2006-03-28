@@ -2,6 +2,7 @@ package HTML::Mason::Site;
 
 use strict;
 use warnings;
+use 5.006001;
 
 use base qw(Class::Accessor);
 

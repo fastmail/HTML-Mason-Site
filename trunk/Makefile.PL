@@ -15,5 +15,6 @@ requires 'YAML::Syck'                  => 0;
 requires 'Getopt::Long::Descriptive'   => 0;
 requires 'HTTP::Server::Simple::Mason' => '0.09';
 
+install_script 'script/msite';
 auto_install;
 WriteAll;
