@@ -63,6 +63,8 @@ e.g. 'cipher_list' instead of 'SSL_cipher_list'.
 See L<Net::Server/run>.  Overridden to use C<< proto >> to
 determine the protocol.
 
+=head2 sig_hup
+
 =cut
 
 1;
