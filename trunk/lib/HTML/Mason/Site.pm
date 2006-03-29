@@ -10,12 +10,17 @@ use UNIVERSAL::require;
 use NEXT;
 use YAML::Syck ();
 use IO::All;
+use File::Basename ();
 
 # fatalsToBrowser isn't working for some reason
 use CGI::Carp;
 
 __PACKAGE__->mk_accessors(
   'config',
+);
+
+__PACKAGE__->mk_ro_accessors(
+  'name',
 );
 
 our $ABORT = "html_mason_site_abort\n";
@@ -56,8 +61,11 @@ sub new {
   # invoke overridden config mutator in case we were passed
   # a YAML file location
   $self->config($self->config) unless ref $self->config;
+  $self->{name} ||= delete $self->config->{name};
   return $self;
 }
+
+=head2 name
 
 =head2 config
 
@@ -68,7 +76,9 @@ sub config {
   if (@_) {
     my $arg = shift;
     if (! ref $arg && -f $arg) {
+      my $name = $arg;
       $arg = YAML::Syck::Load(io($arg)->all);
+      $arg->{name} = File::Basename::basename($name, ".yml");
     }
     $arg = $self->_canonical_config($arg);
     $self->_config_accessor($arg);
@@ -113,6 +123,17 @@ sub mason_config {
   return wantarray
     ? %{ $self->config->{handler} }
       : $self->config->{handler};
+}
+
+=head2 comp_root
+
+=cut
+
+sub comp_root {
+  my $self = shift;
+  my $root = $self->mason_config->{comp_root};
+  $root = ref $root eq 'ARRAY' ? $root : [ $root ];
+  return wantarray ? @{ $root } : $root;
 }
 
 =head2 require_modules

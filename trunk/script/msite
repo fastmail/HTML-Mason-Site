@@ -9,6 +9,10 @@ use HTML::Mason::Site::Server;
 use File::Temp qw(tempdir);
 use File::Spec;
 use Sys::Hostname::Long;
+use IO::All;
+use Fatal qw(unlink mkdir);
+
+my @orig_ARGV = @ARGV;
 
 my ($opt, $usage) = describe_options(
   "%c %o <site>",
@@ -16,9 +20,16 @@ my ($opt, $usage) = describe_options(
   [ "<site> may be either an HTML::Mason::Site subclass," ],
   [ "or a path to a <sitename>.yml file." ],
   [],
-  [ 'port|p=i', 'port number to listen on (defaults to 8100)',
+  [ 'port|p=i', 'port to listen on (defaults to 8100)',
     { default => 8100 },
   ],
+  [ 'restart|r', 'restart when files change (default: true)',
+    { default => 1 },
+  ],
+  [ 'restart-regex|rr=s', 'regex of files to watch (default: \.yml$|\.pm$)',
+    { default => '\.yml$|\.pm$' },
+  ],
+  [], ['mason settings:'],
   [ 'tmp-data|T!' => 'use temporary data directory for mason (default: true)',
     { default => 1 },
   ],
@@ -30,8 +41,18 @@ my ($opt, $usage) = describe_options(
   ],
   [ 'comp-root|C=s' =>
       'shortcut for setting the comp_root; overrides --mason-config' ],
+  [], ['ssl settings:'],
+  [ 'ssl' => 'enable ssl' ],
+  [ 'ssl-port=i' => 'ssl listen port (default: *43, derived from --port)',
+    { implies => { ssl => 1 } },
+  ],
+  [ 'ssl-gen-cert!' => 
+      "generate a cert/key matching this host's hostname (default: true)",
+    { default => 1 },
+  ],
 );
 
+my $hostname = hostname_long;
 my $site;
 {
   $site = shift @ARGV or last;
@@ -61,12 +82,62 @@ if ($opt->{comp_root}) {
   });
 }
 if ($opt->{local_cookie_domain}) {
-  $site->mason_config({ session_cookie_domain => hostname_long });
+  $site->mason_config({ session_cookie_domain => $hostname });
+}
+my $server = HTML::Mason::Site::Server->new($opt->{port});
+if ($opt->{ssl}) {
+  $opt->{ssl_port} ||= int($opt->{port} / 100) * 100 + 43;
+  if ($opt->{ssl_gen_cert}) {
+    my $name = $site->name;
+    my $ssl_dir = "/tmp/mason-ssl-$name-$<";
+    if (-l $ssl_dir) { unlink $ssl_dir }
+    if (-d $ssl_dir) {
+      print STDERR "using existing ssl dir: $ssl_dir\n";
+    } else {
+      mkdir($ssl_dir);
+    }
+
+    if (-e "$ssl_dir/ssl.cnf") {
+      print STDERR "using existing ssl.cnf: $ssl_dir/ssl.cnf\n";
+    } else {
+      io("$ssl_dir/ssl.cnf")->print(<<"END");
+[ req ]
+prompt = no
+distinguished_name = req_dn
+default_bits = 2048
+
+[ req_dn ]
+CN=$hostname
+END
+    }
+    if (-e "$ssl_dir/server.crt" && -e "$ssl_dir/server.key") {
+      print STDERR "using existing server.crt and server.key\n";
+    } else {
+      my $time = time;
+      system(<<"END");
+openssl req -new -x509 -days 365 -nodes -batch \\
+  -set_serial $time           \\
+  -config $ssl_dir/ssl.cnf    \\
+  -out    $ssl_dir/server.crt \\
+  -keyout $ssl_dir/server.key
+END
+    }
+    $server->net_server->ssl_args({
+      server      => 1,
+      cert_file   => "$ssl_dir/server.crt",
+      key_file    => "$ssl_dir/server.key",
+    });
+    $server->net_server->args->{port} = "$opt->{ssl_port}/ssl";
+  }
 }
 
-my $server = HTML::Mason::Site::Server->new($opt->{port});
-
 $server->site($site);
+if ($opt->{restart}) {
+  $server->net_server->argv(\@orig_ARGV);
+  $server->start_restarter({
+    regex => qr/$opt->{restart_regex}/,
+  });
+}
 
 $site->require_modules;
 

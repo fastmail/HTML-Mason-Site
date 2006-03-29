@@ -12,6 +12,9 @@ require HTTP::Server::Simple;
 
 use IO::All;
 
+use File::Modified;
+use File::Find::Rule;
+
 use URI::Escape;
 use File::Spec;
 use File::MMagic;
@@ -50,8 +53,8 @@ See L<HTML::Mason::Site/mason_config>.
 
 =cut
 
-use Net::Server::Fork;
-sub net_server { 'Net::Server::Fork' }
+use HTML::Mason::Site::Server::NetServer;
+sub net_server { __PACKAGE__ . "::NetServer" }
 
 sub mason_config {
   return shift->site->mason_config;
@@ -81,9 +84,8 @@ sub new_handler {
   $m->interp->delayed_object_params(
     'request', out_method => sub {
       if ($self->content_type) {
-        HTML::Mason::Request->instance->cgi_request->content_type(
-          $self->content_type,
-        );
+        my $r = HTML::Mason::Request->instance->cgi_request;
+        $r->content_type || $r->content_type($self->content_type);
       }
       $output->(@_);
     },
@@ -111,11 +113,10 @@ sub handle_request {
     uri_unescape($cgi->url(-absolute => 1, -path_info => 1)),
   );
 
-  my $comp_root = $self->site->mason_config->{comp_root};
   my $content_type;
 
  CONTENT_TYPE: {
-    for my $dir (ref $comp_root eq 'ARRAY' ? @{ $comp_root } : $comp_root) {
+    for my $dir ($self->site->comp_root) {
       next unless -f "$dir$path";
       $content_type = eval { $Mime->mimeTypeOf($path)->type }
         || $Magic->checktype_filename($path);
@@ -168,5 +169,40 @@ sub handle_error {
   return shift->site->handle_error(@_);
 }
 
+=head2 start_restarter
+
+=cut
+
+sub start_restarter {
+  my ($self, $arg) = @_;
+  my $ppid = $$;
+  # XXX formalize this
+  my @dirs = ($self->site->comp_root, qw(conf lib perl-lib));
+  return if fork;
+  close STDIN;
+  open STDIN, '</dev/null';
+  close STDOUT;
+  open STDOUT, '>/dev/null';
+  my $watcher = File::Modified->new;
+  my %added;
+  while (1) {
+    exit if getppid == 1;
+    if (my @changed = $watcher->changed) {
+      $watcher->update;
+      warn "changed files:\n";
+      warn "  $_\n" for @changed;
+      warn "reloading.\n";
+      kill 1 => $ppid;
+    }
+    if (my @files = grep { !$added{$_}++ }
+          File::Find::Rule
+              ->file->name($arg->{regex})
+                ->in(@dirs)) {
+      warn "adding files: @files\n";
+      $watcher->addfile(@files);
+    }
+    sleep 1;
+  }
+}
 
 1;
