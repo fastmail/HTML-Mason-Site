@@ -11,6 +11,7 @@ use NEXT;
 use YAML::Syck ();
 use IO::All;
 use File::Basename ();
+use Scalar::Util ();
 
 # fatalsToBrowser isn't working for some reason
 use CGI::Carp;
@@ -99,6 +100,7 @@ sub _canonical_config {
       $module = { name => $module, args => [] };
     }
   }
+
   for my $ctype (@{ $arg->{content_types} }) {
     if (ref $ctype eq 'HASH') {
       $ctype = { not => qr/$ctype->{not}/i };
@@ -106,6 +108,7 @@ sub _canonical_config {
       $ctype = { is => qr/$ctype/i };
     }
   }
+
   return $arg;
 }
 

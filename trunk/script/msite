@@ -23,6 +23,9 @@ my ($opt, $usage) = describe_options(
   [ 'port|p=i', 'port to listen on (defaults to 8100)',
     { default => 8100 },
   ],
+  [ 'local|l' => 'use local versions of files (default: true)',
+    { default => 1 },
+  ],
   [ 'restart|r', 'restart when files change (default: true)',
     { default => 1 },
   ],
@@ -51,6 +54,11 @@ my ($opt, $usage) = describe_options(
     { default => 1 },
   ],
 );
+
+if ($opt->{local}) {
+  require lib;
+  lib->import(qw(perl-lib lib));
+}
 
 my $hostname = hostname_long;
 my $site;
