@@ -7,6 +7,7 @@ use Getopt::Long::Descriptive;
 use HTML::Mason::Site;
 use HTML::Mason::Site::Server;
 use File::Temp qw(tempdir);
+use File::Spec;
 use Sys::Hostname::Long;
 
 my ($opt, $usage) = describe_options(
@@ -55,7 +56,9 @@ if ($opt->{mason_config}) {
   $site->mason_config(YAML::Syck::Load($opt->{mason_config}));
 }
 if ($opt->{comp_root}) {
-  $site->mason_config({ comp_root => $opt->{comp_root} });
+  $site->mason_config({
+    comp_root => File::Spec->rel2abs($opt->{comp_root}),
+  });
 }
 if ($opt->{local_cookie_domain}) {
   $site->mason_config({ session_cookie_domain => hostname_long });
