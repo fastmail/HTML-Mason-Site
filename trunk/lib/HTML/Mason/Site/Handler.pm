@@ -18,18 +18,24 @@ BEGIN {
         require Carp;
         Carp::croak("$handler called with no site defined");
       }
-      my ($next_class) = grep { $_ ne __PACKAGE__ } @{ref($self) . "::ISA"};
-      my $meth = $next_class . "::$handler";
-      return $self->$meth(@_);
+      return $self->__NEXT__($handler => @_);
     };
   }
 }
 
 use Sub::Exporter -setup => {
-  exports => [ qw(site request_args), @HANDLERS ],
+  exports => [ qw(site request_args __NEXT__), @HANDLERS ],
 };
 
-use NEXT;
+# NEXT.pm has problems here for reasons I can't figure out
+# right now, and I can't use SUPER:: because it's a mixin
+sub __NEXT__ {
+  my $self = shift;
+  no strict 'refs';
+  my $next = ${ (ref($self) || $self) . "::ISA" }[0];
+  my $meth = $next . "::" . shift;
+  return $self->$meth(@_);
+}
 
 =head1 NAME
 
@@ -61,7 +67,7 @@ sub request_args {
 
   $self->site->set_globals($r, $self);
 
-  return $self->NEXT::request_args($r);
+  return $self->__NEXT__(request_args => $r);
 }
 
 package HTML::Mason::Site::CGIHandler;
