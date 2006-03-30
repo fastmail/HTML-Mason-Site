@@ -3,35 +3,47 @@ package HTML::Mason::Site::Handler;
 use strict;
 use warnings;
 
-use base qw(Class::Accessor);
+# ::Fast has no separate get/set, and thus is easily exportable
+use base qw(Class::Accessor::Fast);
+
+my @HANDLERS;
+BEGIN { @HANDLERS = qw(handle_request handle_comp handle_cgi_object) }
+BEGIN { __PACKAGE__->mk_accessors('site') }
+BEGIN {
+  for my $handler (@HANDLERS) {
+    no strict 'refs';
+    *$handler = sub {
+      my $self = shift;
+      unless ($self->site) {
+        require Carp;
+        Carp::croak("$handler called with no site defined");
+      }
+      my ($next_class) = grep { $_ ne __PACKAGE__ } @{ref($self) . "::ISA"};
+      my $meth = $next_class . "::$handler";
+      return $self->$meth(@_);
+    };
+  }
+}
+
+use Sub::Exporter -setup => {
+  exports => [ qw(site request_args), @HANDLERS ],
+};
 
 use NEXT;
 
-__PACKAGE__->mk_accessors(
-  qw(site handler_type),
-);
+=head1 NAME
 
-for my $handler (qw(handle_request handle_comp handle_cgi_object)) {
-  no strict 'refs';
-  *$handler = sub {
-    my $self = shift;
-    unless ($self->site) {
-      require Carp;
-      Carp::croak("$handler called with no site defined");
-    }
-    my ($next_class) = grep { $_ ne __PACKAGE__ } @{ref($self) . "::ISA"};
-    my $meth = $next_class . "::$handler";
-    return $self->$meth(@_);
-  };
-}
+HTML::Mason::Site::Handler
 
-sub new {
-  my $class = shift;
-  no strict 'refs';
-  my ($next_class) = grep { $_ ne __PACKAGE__ } @{$class . "::ISA"};
-  my $meth = $next_class . "::new";
-  return $class->$meth(@_);
-}
+=head1 DESCRIPTION
+
+Mixin for HTML::Mason::ApacheHandler and ::CGIHandler.
+
+Methods are overridden to call
+L<set_globals|HTML::Mason::Site/set_globals> and to check
+for the presence of a site.
+
+=cut
 
 sub request_args {
   my ($self, $r) = @_;
@@ -41,27 +53,14 @@ sub request_args {
   return $self->NEXT::request_args($r);
 }
 
-sub handler_type {
-  my $self = shift;
-  if (@_) {
-    my $type = shift;
-    my $class = "HTML::Mason::Site::${type}Handler";
-    no strict 'refs';
-    die "no such site handler class: $class" unless @{ $class . "::ISA" };
-    bless $self => $class;
-    return $self->_handler_type_accessor($type);
-  }
-  return $self->_handler_type_accessor;
-}
-
 package HTML::Mason::Site::CGIHandler;
 
-use base qw(HTML::Mason::Site::Handler
-            HTML::Mason::CGIHandler);
+use base qw(HTML::Mason::CGIHandler);
+use HTML::Mason::Site::Handler '-all';
 
 package HTML::Mason::Site::ApacheHandler;
 
-use base qw(HTML::Mason::Site::Handler
-            HTML::Mason::ApacheHandler);
+use base qw(HTML::Mason::ApacheHandler);
+use HTML::Mason::Site::Handler '-all';
 
 1;
