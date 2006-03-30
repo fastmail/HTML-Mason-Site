@@ -13,6 +13,7 @@ use IO::All;
 use File::Basename ();
 use Scalar::Util ();
 use CGI::Cookie ();
+use Object::Array;
 
 # fatalsToBrowser isn't working for some reason
 use CGI::Carp;
@@ -88,6 +89,17 @@ sub config {
   return $self->_config_accessor;
 }
 
+sub _expand_ctype {
+  my ($ctype) = @_;
+  if (ref $ctype eq 'ARRAY') {
+    return Object::Array->new([ map { _expand_ctype($_) } @$ctype ]);
+  } elsif (ref $ctype eq 'HASH') {
+    return { not => qr/$ctype->{not}/i };
+  } else {
+    return { is  => qr/$ctype/i };
+  }
+}
+
 sub _canonical_config {
   my ($self, $arg) = @_;
 
@@ -99,13 +111,7 @@ sub _canonical_config {
     }
   }
 
-  for my $ctype (@{ $arg->{content_types} ||= [] }) {
-    if (ref $ctype eq 'HASH') {
-      $ctype = { not => qr/$ctype->{not}/i };
-    } else {
-      $ctype = { is => qr/$ctype/i };
-    }
-  }
+  $arg->{content_types} = _expand_ctype($arg->{content_types} || [ @STD_CTYPES ]);
 
   for my $global (keys %{ $arg->{globals} ||= {} }) {
     warn "found allowed global: $global\n";
@@ -171,14 +177,23 @@ sub require_modules {
 
 =cut
 
+sub _eval_ctype {
+  my ($ctype, $val, $or) = @_;
+  if (eval { $ctype->ref }) {
+    # it's an Object::Array
+    my $meth = $or ? "any" : "all";
+    return $ctype->$meth(sub { _eval_ctype($_, $val, !$or) });
+  }
+  return 0 if (
+    $ctype->{is} && $val !~ $ctype->{is} or
+      $ctype->{not} && $val =~ $ctype->{not}
+    );
+  return 1;
+}
+
 sub handles_content_type {
   my ($self, $type) = @_;
-  for my $ctype (@STD_CTYPES, @{ $self->config->{content_types} }) {
-    return 0 if $ctype->{is}  && $type !~ $ctype->{is};
-    return 0 if $ctype->{not} && $type =~ $ctype->{not};
-  }
-  # default allow, since the default is fairly restrictive
-  return 1;
+  return _eval_ctype($self->config->{content_types}, $type);
 }
 
 =head2 set_globals
