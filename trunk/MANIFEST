@@ -15,6 +15,7 @@ inc/Module/Install/Metadata.pm
 inc/Module/Install.pm
 inc/Module/AutoInstall.pm
 lib/HTML/Mason/Site.pm
+lib/HTML/Mason/Site/Handler.pm
 lib/HTML/Mason/Site/Server.pm
 lib/HTML/Mason/Site/Server/NetServer.pm
 t/00-load.t

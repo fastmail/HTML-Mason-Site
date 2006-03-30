@@ -39,11 +39,22 @@ HTML::Mason::Site::Handler
 
 Mixin for HTML::Mason::ApacheHandler and ::CGIHandler.
 
-Methods are overridden to call
-L<set_globals|HTML::Mason::Site/set_globals> and to check
-for the presence of a site.
+=head2 handle_request
+
+=head2 handle_comp
+
+=head2 handle_cgi_object
+
+Overridden to check for C<< site >>.
+
+=head2 request_args
+
+Overridden to call L<set_globals|HTML::Mason::Site/set_globals>.
 
 =cut
+
+# XXX this might happen more than once; should we move
+# set_globals elsewhere?
 
 sub request_args {
   my ($self, $r) = @_;
