@@ -61,12 +61,15 @@ if ($opt->{local}) {
 }
 
 my $hostname = hostname_long;
-my $site;
+$ENV{SERVER_NAME} = $hostname;
+
+my ($site, $site_file);
 {
   $site = shift @ARGV or last;
   if ($site =~ /\.yml$/ && -f $site) {
+    $site_file = $site;
     $site = HTML::Mason::Site->new({
-      config => $site,
+      config => $site_file,
     });
   } elsif ($site =~ /^(?:\w+::)*[a-zA-Z_]\w*$/) {
     eval "require $site";
@@ -143,6 +146,7 @@ $server->site($site);
 if ($opt->{restart}) {
   $server->net_server->argv(\@orig_ARGV);
   $server->start_restarter({
+    watch => [ $site_file ? $site_file : () ],
     regex => qr/$opt->{restart_regex}/,
   });
 }

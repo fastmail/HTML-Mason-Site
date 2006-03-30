@@ -12,6 +12,7 @@ use YAML::Syck ();
 use IO::All;
 use File::Basename ();
 use Scalar::Util ();
+use CGI::Cookie ();
 
 # fatalsToBrowser isn't working for some reason
 use CGI::Carp;
@@ -90,10 +91,7 @@ sub config {
 sub _canonical_config {
   my ($self, $arg) = @_;
 
-  $arg->{modules}       ||= [];
-  $arg->{content_types} ||= [];
-
-  for my $module (@{ $arg->{modules} }) {
+  for my $module (@{ $arg->{modules} ||= [] }) {
     if (ref $module eq 'HASH') {
       $module->{args} ||= [];
     } else {
@@ -101,13 +99,19 @@ sub _canonical_config {
     }
   }
 
-  for my $ctype (@{ $arg->{content_types} }) {
+  for my $ctype (@{ $arg->{content_types} ||= [] }) {
     if (ref $ctype eq 'HASH') {
       $ctype = { not => qr/$ctype->{not}/i };
     } else {
       $ctype = { is => qr/$ctype/i };
     }
   }
+
+  for my $global (keys %{ $arg->{globals} ||= {} }) {
+    warn "found allowed global: $global\n";
+    $arg->{handler}->{allow_globals} ||= [];
+    push @{ $arg->{handler}->{allow_globals} }, $global;
+  }    
 
   return $arg;
 }
@@ -128,14 +132,18 @@ sub mason_config {
       : $self->config->{handler};
 }
 
-=head2 comp_root
+=head2 comp_roots
+
+Returns only the directories, not the keys
 
 =cut
 
-sub comp_root {
+sub comp_roots {
   my $self = shift;
   my $root = $self->mason_config->{comp_root};
-  $root = ref $root eq 'ARRAY' ? $root : [ $root ];
+  $root = ref $root eq 'ARRAY' ? [
+    map { $_->[1] } @{ $root }
+  ] : [ $root ];
   return wantarray ? @{ $root } : $root;
 }
 
@@ -171,6 +179,69 @@ sub handles_content_type {
   }
   # default allow, since the default is fairly restrictive
   return 1;
+}
+
+=head2 set_globals
+
+  $site->set_globals($r, $handler);
+
+Given C<< $r >> and an HTML::Mason::ApacheHandler or
+HTML::Mason::CGIHandler, install global variables into its
+interpreter.
+
+=cut
+
+sub set_globals {
+  my ($self, $r, $handler) = @_;
+
+  my %c = CGI::Cookie->fetch($r);
+  # blurgh, work around bustedness in CGIHandler
+  %c or %c = CGI::Cookie->parse($ENV{COOKIE});
+
+  for my $var (keys %{ $self->config->{globals} }) {
+    my $arg = $self->config->{globals}->{$var};
+    my $gclass = Scalar::Util::blessed($arg);
+    if ($gclass eq 'cookie') {
+      (my $cookie_name = $var) =~ s/^[\$\@%]//;
+      my $cookie = $c{$cookie_name};
+      if ($cookie and $cookie->value =~ /($arg->{regex})/) {
+        my $val = $1;
+        warn "set global $var to '$val' from cookie\n";
+        $handler->interp->set_global($var => $val);
+      } else {
+        warn "didn't find cookie '$cookie_name'\n";
+      }
+      next;
+    }
+    if ($gclass) {
+      my $method = $arg->{method} || 'new';
+      my @args = @{ $arg->{args} || [] };
+      my $obj = $gclass->$method(@args);
+      warn "set global $var to '$obj' from $gclass->$method(@args)\n";
+      $handler->interp->set_global($var => $obj);
+      next;
+    }
+
+    warn "set global $var to '$arg' from site config\n";
+    $handler->interp->set_global($var => $arg);
+  }
+}
+
+=head2 rewrite_path
+
+=cut
+
+sub rewrite_path {
+  my ($self, $path) = @_;
+  warn "rewriting path: $path\n";
+  for my $rule (@{ $self->config->{rewrite} ||= [] }) {
+    my ($pattern, $result) = @$rule;
+    warn "applying rewrite: $pattern => $result\n";
+    if (eval "\$path =~ s,$pattern,$result,") {
+      warn "path is now: $path\n";
+    }
+  }
+  return $path;
 }
 
 =head2 pre_handle_request

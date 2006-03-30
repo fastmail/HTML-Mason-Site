@@ -15,7 +15,6 @@ use IO::All;
 use File::Modified;
 use File::Find::Rule;
 
-use URI::Escape;
 use File::Spec;
 use File::MMagic;
 use MIME::Types;
@@ -70,6 +69,20 @@ Overridden to be empty (no default escaping).
 # override the default of html escaping everything
 sub default_mason_config { () }
 
+=head2 handler_class
+
+Use HTML::Mason::Site::CGIHandler.
+
+=cut
+
+use HTML::Mason::Site::Handler;
+sub handler_class { 'HTML::Mason::Site::CGIHandler' }
+
+# this unfortunateness is to make MasonX::Request::WithApacheSession choose
+# the right superclass
+$HTML::Mason::ApacheHandler::VERSION = 0;
+$HTML::Mason::CGIHandler::VERSION = 1;
+
 =head2 new_handler
 
 See L<HTTP::Server::Simple::Mason/new_handler>.  Overridden
@@ -90,6 +103,7 @@ sub new_handler {
       $output->(@_);
     },
   );
+  $m->site($self->site);
   return $m;
 }
 
@@ -109,18 +123,30 @@ sub handle_request {
 
   $self->content_type(undef);
   
-  my $path = File::Spec->canonpath(
-    uri_unescape($cgi->url(-absolute => 1, -path_info => 1)),
-  );
+  my $path = $self->site->rewrite_path($cgi->path_info);
+  $cgi->path_info($path);
+
+  my $index_name = $self->site->config->{index_name} || 'index.mhtml';
+
+  my $interp = $self->mason_handler->interp;
+
+  # stolen from HTTP::Server::Simple::Mason and modifieda
+  if (! $interp->comp_exists($path)
+        && $interp->comp_exists("$path/$index_name")) {
+    $path .= "/$index_name";
+    $cgi->path_info($path);
+  }
+  
 
   my $content_type;
 
  CONTENT_TYPE: {
-    for my $dir ($self->site->comp_root) {
-      next unless -f "$dir$path";
-      $content_type = eval { $Mime->mimeTypeOf($path)->type }
-        || $Magic->checktype_filename($path);
-#      warn "considering $dir$path: $content_type\n";
+    for my $dir ($self->site->comp_roots) {
+      my $filename = "$dir$path";
+      next unless -f $filename;
+      $content_type = eval { $Mime->mimeTypeOf($filename)->type }
+        || $Magic->checktype_filename($filename);
+#      print STDERR "considering $filename: $content_type\n";
 
 #      if ($content_type eq 'text/directory') {
 #        $path .= (grep { -f "$dir$path/$_" } qw(index.mhtml index.html index))[0];
@@ -128,8 +154,8 @@ sub handle_request {
 #      }
       
       unless ($self->site->handles_content_type($content_type)) {
-        warn "static: $dir$path\n";
-        my $content = io("$dir$path")->all;
+        print STDERR "static: $filename\n";
+        my $content = io("$filename")->all;
         print "HTTP/1.1 200 OK\n";
         print "Content-type: $content_type\n";
         print "Content-length: " . length($content) . "\n\n";
@@ -140,8 +166,11 @@ sub handle_request {
     }
   }
 
+  # lame
+  $content_type = 'text/html' if $path =~ /\.mhtml$/;
+
   if ($content_type) {
-    warn "dynamic: $path; content_type: $content_type\n";
+    print STDERR "dynamic: $path; content_type: $content_type\n";
     $self->content_type($content_type);
   }
 
@@ -177,13 +206,18 @@ sub start_restarter {
   my ($self, $arg) = @_;
   my $ppid = $$;
   # XXX formalize this
-  my @dirs = ($self->site->comp_root, qw(conf lib perl-lib));
+  my @dirs = (
+    $self->site->comp_roots,
+    qw(conf etc lib perl-lib),
+  );
   return if fork;
   close STDIN;
   open STDIN, '</dev/null';
   close STDOUT;
   open STDOUT, '>/dev/null';
-  my $watcher = File::Modified->new;
+  my $watcher = File::Modified->new(
+    Files => $arg->{watch} || [],
+  );
   my %added;
   while (1) {
     exit if getppid == 1;
