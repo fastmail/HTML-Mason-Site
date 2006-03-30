@@ -75,6 +75,11 @@ package HTML::Mason::Site::CGIHandler;
 use base qw(HTML::Mason::CGIHandler);
 use HTML::Mason::Site::Handler '-all';
 
+# meaningless to CGI, but accept it for ease-of-use
+__PACKAGE__->valid_params(
+  decline_dirs => { default => 1 },
+);
+
 package HTML::Mason::Site::ApacheHandler;
 
 use base qw(HTML::Mason::ApacheHandler);
