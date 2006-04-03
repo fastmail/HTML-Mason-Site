@@ -89,8 +89,10 @@ if ($opt->{mason_config}) {
 }
 if ($opt->{comp_root}) {
   $site->mason_config({
-    comp_root => File::Spec->rel2abs($opt->{comp_root}),
-  });
+    comp_root => [ 
+      [ 'msite_command_line' => File::Spec->rel2abs($opt->{comp_root}) ],
+    ],
+  }, { mode => 'prepend' });
 }
 if ($opt->{local_cookie_domain}) {
   $site->mason_config({ session_cookie_domain => $hostname });

@@ -129,8 +129,20 @@ sub _canonical_config {
 sub mason_config {
   my $self = shift;
   if (@_) {
-    while (my ($key, $val) = each %{ $_[0] }) {
-      $self->config->{handler}->{$key} = $val;
+    my $new = shift;
+    my $opt = shift;
+    $opt->{mode} ||= 'replace';
+    my $handler = $self->config->{handler};
+    while (my ($key, $val) = each %{ $new }) {
+      if ($opt->{mode} eq 'replace') {
+        $handler->{$key} = $val;
+      } elsif ($opt->{mode} eq 'prepend') {
+        unshift @{ $handler->{$key} }, @{ $val };
+      } elsif ($opt->{mode} eq 'append') {
+        # XXX
+      } else {
+        die "unknown mason_config mode: $opt->{mode}";
+      }
     }
   }
   return wantarray
