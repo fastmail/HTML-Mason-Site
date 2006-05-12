@@ -1,0 +1,15 @@
+--- lib/Apache/Session/Wrapper.pm.orig	2006-03-28 14:18:35.000000000 -0500
++++ lib/Apache/Session/Wrapper.pm	2006-03-28 14:24:54.000000000 -0500
+@@ -647,7 +647,11 @@
+         {
+             if ( $header_object->can($meth) )
+             {
+-                if ( $header_object->$meth->can('add') )
++                # use eval because for a given $header_object, ->can($meth)
++                # may return true without it being true that ->$meth will
++                # return an object (or even a defined value),
++                # e.g. HTML::Mason::FakeApache
++                if ( eval { $header_object->$meth->can('add') } )
+                 {
+                     $header_object->$meth->add( 'Set-Cookie' => $cookie );
+                 }
