@@ -177,7 +177,7 @@ sub _command_import {
 sub require_modules {
   my $self = shift;
   for my $module (@STD_MODULES, @{ $self->config->{modules} }) {
-    print STDERR "requiring $module->{name}\n";
+    #print STDERR "requiring $module->{name}\n";
     $module->{name}->require;
     next if $module->{no_import};
     my @args = @{ $module->{args} };
