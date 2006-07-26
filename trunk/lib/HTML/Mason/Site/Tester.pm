@@ -53,6 +53,10 @@ Make a request for the given path, and return the content.
 
 =cut
 
+sub url_base { $ENV{MASON_SERVER} || shift->default_url_base }
+
+sub default_url_base { "http://localhost.localdomain" }
+
 sub new {
   my $class = shift;
   my $site_config = shift;
@@ -67,15 +71,12 @@ sub new {
 
 sub _request_from_url {
   my ($self, $url) = @_;
-  $url = "http://localhost.localdomain$url" if $url =~ m!^/!;
+  $url = $self->url_base . $url if $url =~ m!^/!;
   return HTTP::Request->new( GET => $url );
 }
 
-sub request {
+sub _local_request {
   my ($self, $request) = @_;
-  $request = $self->_request_from_url($request)
-    unless eval { $request->isa('HTTP::Request') };
-
   my $c = HTTP::Request::AsCGI->new( $request )->setup;
   $self->{site}->handler->handle_request;
   $c->restore;
@@ -85,6 +86,39 @@ sub request {
   $response->header('Content-Base' => $request->uri);
 
   return $response;
+}
+
+my $agent;
+sub _remote_request {
+  my ($self, $request) = @_;
+  require LWP::UserAgent;
+  unless ($agent) {
+    $agent = LWP::UserAgent->new(
+      keep_alive   => 1,
+      max_redirect => 0,
+      timeout      => 60,
+    );
+    $agent->env_proxy;
+  }
+
+  # XXX this should be moved into TWMO
+  my $server = URI->new( $ENV{MASON_SERVER} );
+  $request->uri->scheme( $server->scheme );
+  $request->uri->host  ( $server->host );
+  $request->uri->port  ( $server->port );
+  $request->uri->path  ( $server->path . $request->uri->path );
+
+  return $agent->request($request);
+}
+
+sub request {
+  my ($self, $request) = @_;
+  $request = $self->_request_from_url($request)
+    unless eval { $request->isa('HTTP::Request') };
+
+  return $ENV{MASON_SERVER} ?
+    $self->_remote_request($request) :
+      $self->_local_request($request);
 }
 
 1;
