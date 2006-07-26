@@ -150,6 +150,45 @@ sub mason_config {
       : $self->config->{handler};
 }
 
+=head2 set_handler
+
+  $site->set_handler($class, ...);
+
+Sets up handler arguments for this site.  The first
+(mandatory) argument is the name of the Mason site handler class
+to use, e.g. C<HTML::Mason::Site::ApacheHandler>.  The remaining
+arguments are passed to C<mason_config>.
+
+As a convenience, returns the constructed handler object;
+see the C<L<handler|/handler>> method.
+
+=head2 handler
+
+Returns the handler object previously created/specified by
+C<L<set_handler|/set_handler>>.
+
+=cut
+
+sub set_handler {
+  my $self  = shift;
+  my $class = shift;
+  $self->mason_config(@_) if @_;
+  $self->{handler_class} = $class;
+}
+
+sub handler {
+  my $self = shift;
+  die "call set_handler() before handler()" unless $self->{handler_class};
+  unless ($self->{handler}) {
+    $self->{handler} = $self->{handler_class}->new($self->mason_config);
+
+    # XXX breaking encapsulation
+    $self->{handler}->site($self);
+    Scalar::Util::weaken($self->{handler}->{site});
+  }
+  return $self->{handler};
+}
+
 =head2 comp_roots
 
 Returns only the directories, not the keys

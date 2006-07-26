@@ -2,11 +2,14 @@ package HTML::Mason::Site::Tester;
 
 use strict;
 use warnings;
+use base qw(Class::Accessor::Fast);
 use HTML::Mason::Site;
 use HTML::Mason::Site::CGIHandler;
 
 use HTTP::Request;
 use HTTP::Request::AsCGI;
+
+__PACKAGE__->mk_accessors(qw(site));
 
 =head1 NAME
 
@@ -54,15 +57,11 @@ sub new {
   my $class = shift;
   my $site_config = shift;
   my $site = HTML::Mason::Site->new($site_config);
-  my $handler = HTML::Mason::Site::CGIHandler->new(
-    $site->mason_config,
-  );
-  $handler->site($site);
+  $site->set_handler('HTML::Mason::Site::CGIHandler');
   $site->require_modules;
 
   return bless {
     site    => $site,
-    handler => $handler,
   } => $class;
 }
 
@@ -78,7 +77,7 @@ sub request {
     unless eval { $request->isa('HTTP::Request') };
 
   my $c = HTTP::Request::AsCGI->new( $request )->setup;
-  $self->{handler}->handle_request;
+  $self->{site}->handler->handle_request;
   $c->restore;
 
   my $response = $c->response;
