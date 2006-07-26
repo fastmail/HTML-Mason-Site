@@ -51,6 +51,15 @@ Make a request for the given path.  Returns a HTTP::Response object.
 
 Make a request for the given path, and return the content.
 
+=head2 url_base
+
+=head2 default_url_base
+
+See L<Test::WWW::Mechanize::Object|Test::WWW::Mechanize::Object>.
+
+Uses the C<MASON_SERVER> environment variable to do remote
+requests on demand.
+
 =cut
 
 sub url_base { $ENV{MASON_SERVER} || shift->default_url_base }
