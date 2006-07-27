@@ -189,6 +189,30 @@ sub handler {
   return $self->{handler};
 }
 
+=head2 session
+
+  my $session = $site->session($sid);
+
+Returns the (tied) session configured by this site's C<mason_config>, if any.
+
+=cut
+
+sub session {
+  my $self = shift;
+  my $config = $self->mason_config;
+  return unless $config->{session_class};
+  my %session_config = map { 
+    (my $key = $_) =~ s/^session_//;
+    $key => $config->{$_}
+  } grep { /^session_/ } keys %$config;
+  require Apache::Session::Wrapper;
+  my $wrapper = Apache::Session::Wrapper->new(
+    %session_config,
+    use_cookie => 0,
+  );
+  return $wrapper->session(session_id => shift);
+}
+ 
 =head2 comp_roots
 
 Returns only the directories, not the keys
