@@ -43,7 +43,7 @@ my ($opt, $usage) = describe_options(
   [ 'mason-config|M=s' => 'optional YAML overriding mason ("handler") config',
     { default => '{}' },
   ],
-  [ 'comp-root|C=s' =>
+  [ 'comp-root|C=s@' =>
       'shortcut for setting the comp_root; overrides --mason-config' ],
   [], ['ssl settings:'],
   [ 'ssl' => 'enable ssl' ],
@@ -89,11 +89,14 @@ if ($opt->{mason_config}) {
   $site->mason_config(YAML::Syck::Load($opt->{mason_config}));
 }
 if ($opt->{comp_root}) {
-  $site->mason_config({
-    comp_root => [ 
-      [ 'msite_command_line' => File::Spec->rel2abs($opt->{comp_root}) ],
-    ],
-  }, { mode => 'prepend' });
+  for my $root (reverse @{ $opt->{comp_root} }) {
+    (my $name = $root) =~ tr{./}{__};
+    $site->mason_config({
+      comp_root => [ 
+        [ "msite_$name" => File::Spec->rel2abs($root) ],
+      ],
+    }, { mode => 'prepend' });
+  }
 }
 if ($opt->{local_cookie_domain}) {
   $site->mason_config({ session_cookie_domain => $hostname });
