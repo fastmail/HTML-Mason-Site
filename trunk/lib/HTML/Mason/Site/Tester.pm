@@ -9,6 +9,8 @@ use HTML::Mason::Site::CGIHandler;
 use HTTP::Request;
 use HTTP::Request::AsCGI;
 
+use IO::File;
+
 __PACKAGE__->mk_accessors(qw(site));
 
 =head1 NAME
@@ -86,7 +88,9 @@ sub _request_from_url {
 
 sub _local_request {
   my ($self, $request) = @_;
-  my $c = HTTP::Request::AsCGI->new( $request )->setup;
+  my $c = HTTP::Request::AsCGI->new( $request );
+  $c->stderr(IO::File->new_tmpfile);
+  $c->setup;
   $self->{site}->handler->handle_request;
   $c->restore;
 
