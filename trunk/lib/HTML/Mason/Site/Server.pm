@@ -71,12 +71,12 @@ sub default_mason_config { () }
 
 =head2 handler_class
 
-Use HTML::Mason::Site::CGIHandler.
+Use HTML::Mason::Site::FakeApacheHandler.
 
 =cut
 
 use HTML::Mason::Site::Handler;
-sub handler_class { 'HTML::Mason::Site::CGIHandler' }
+sub handler_class { 'HTML::Mason::Site::FakeApacheHandler' }
 
 # this unfortunateness is to make MasonX::Request::WithApacheSession choose
 # the right superclass

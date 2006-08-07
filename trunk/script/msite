@@ -5,7 +5,7 @@ use warnings;
 
 use Getopt::Long::Descriptive;
 use HTML::Mason::Site;
-use HTML::Mason::Site::CGIHandler;
+use HTML::Mason::Site::FakeApacheHandler;
 use HTML::Mason::Site::Server;
 use File::Temp qw(tempdir);
 use File::Spec;
