@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use base qw(Class::Accessor::Fast);
 use HTML::Mason::Site;
-use HTML::Mason::Site::CGIHandler;
+use HTML::Mason::Site::FakeApacheHandler;
 
 use HTTP::Request;
 use HTTP::Request::AsCGI;
@@ -72,7 +72,7 @@ sub new {
   my $class = shift;
   my $site_config = shift;
   my $site = HTML::Mason::Site->new($site_config);
-  $site->set_handler('HTML::Mason::Site::CGIHandler');
+  $site->set_handler('HTML::Mason::Site::FakeApacheHandler');
   $site->require_modules;
 
   return bless {
@@ -89,7 +89,8 @@ sub _request_from_url {
 sub _local_request {
   my ($self, $request) = @_;
   my $c = HTTP::Request::AsCGI->new( $request );
-  $c->stderr(IO::File->new_tmpfile);
+  $c->stderr(IO::File->new_tmpfile)
+    unless $ENV{HTML_MASON_SITE_TESTER_DEBUG};
   $c->setup;
   $self->{site}->handler->handle_request;
   $c->restore;
