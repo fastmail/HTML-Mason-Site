@@ -122,6 +122,7 @@ sub handle_request {
   my ($cgi) = @_;
 
   $self->content_type(undef);
+
   
   my $path = $self->site->rewrite_path($cgi->path_info);
   $cgi->path_info($path);
@@ -136,10 +137,10 @@ sub handle_request {
     $path .= "/$index_name";
     $cgi->path_info($path);
   }
-  
+  $ENV{PATH_INFO} = $cgi->path_info;
 
   my $content_type;
-
+  
  CONTENT_TYPE: {
     for my $dir ($self->site->comp_roots) {
       my $filename = "$dir$path";
