@@ -117,6 +117,22 @@ statically.
 
 =cut
 
+sub _handle_static {
+  my ($self, $filename, $content_type) = @_;
+  print STDERR "static: $filename\n";
+  my $content = io("$filename")->all;
+  print "HTTP/1.1 200 OK\n";
+  print "Content-type: $content_type\n";
+  print "Content-length: " . length($content) . "\n\n";
+  print $content;
+}
+
+sub _content_type_of {
+  my ($self, $filename) = @_;
+  return eval { $Mime->mimeTypeOf($filename)->type }
+    || $Magic->checktype_filename($filename);
+}
+
 sub handle_request {
   my $self = shift;
   my ($cgi) = @_;
@@ -141,30 +157,22 @@ sub handle_request {
 
   my $content_type;
   
- CONTENT_TYPE: {
-    for my $dir ($self->site->comp_roots) {
-      my $filename = "$dir$path";
-      next unless -f $filename;
-      $content_type = eval { $Mime->mimeTypeOf($filename)->type }
-        || $Magic->checktype_filename($filename);
-#      print STDERR "considering $filename: $content_type\n";
-
-#      if ($content_type eq 'text/directory') {
-#        $path .= (grep { -f "$dir$path/$_" } qw(index.mhtml index.html index))[0];
-#        redo CONTENT_TYPE;
-#      }
-      
-      unless ($self->site->handles_content_type($content_type)) {
-        print STDERR "static: $filename\n";
-        my $content = io("$filename")->all;
-        print "HTTP/1.1 200 OK\n";
-        print "Content-type: $content_type\n";
-        print "Content-length: " . length($content) . "\n\n";
-        print $content;
-        return;
-      }
-      last;
+  for my $root (
+    (map { [ $_, sub { 1 } ] }
+      @{ $self->site->config->{static_roots} || [] }),
+    (map { [ $_, sub { !$self->site->handles_content_type(shift) } ] }
+      $self->site->comp_roots),
+  ) {
+    my ($dir, $static_ok) = @$root;
+    my $filename = File::Spec->catfile($dir, $path);
+    next unless -f $filename;
+    $content_type = $self->_content_type_of($filename);
+    
+    if ($static_ok->($content_type)) {
+      $self->_handle_static($filename, $content_type);
+      return;
     }
+    last;
   }
 
   # lame
