@@ -88,6 +88,9 @@ sub _request_from_url {
 
 sub _local_request {
   my ($self, $request) = @_;
+  my $uri = $request->uri;
+  $uri->path($self->{site}->rewrite_path($uri->path));
+
   my $c = HTTP::Request::AsCGI->new( $request );
   $c->stderr(IO::File->new_tmpfile)
     unless $ENV{HTML_MASON_SITE_TESTER_DEBUG};
