@@ -216,7 +216,7 @@ sub start_restarter {
   my $ppid = $$;
   # XXX formalize this
   my @dirs = (
-    $self->site->comp_roots,
+#    $self->site->comp_roots,
     qw(conf etc lib perl-lib),
   );
   return if fork;
@@ -236,15 +236,19 @@ sub start_restarter {
       warn "  $_\n" for @changed;
       warn "reloading.\n";
       kill 1 => $ppid;
+      next;
     }
-    if (my @files = grep { !$added{$_}++ }
-          File::Find::Rule
-              ->file->name($arg->{regex})
-                ->in(@dirs)) {
+    if (my @files = grep {
+      !$added{$_}++
+    } File::Find::Rule->or(
+        File::Find::Rule->directory->name('.svn')->prune->discard,
+        File::Find::Rule->file->name($arg->{regex})
+      )->in(@dirs)) {
       warn "adding files: @files\n";
       $watcher->addfile(@files);
+      next;
     }
-    sleep 1;
+    sleep 2;
   }
 }
 
