@@ -323,12 +323,12 @@ sub set_globals {
 
 sub rewrite_path {
   my ($self, $path) = @_;
-  warn "rewriting path: $path\n";
+  #warn "rewriting path: $path\n";
   for my $rule (@{ $self->config->{rewrite} ||= [] }) {
     my ($pattern, $result) = @$rule;
-    warn "applying rewrite: $pattern => $result\n";
+    #warn "applying rewrite: $pattern => $result\n";
     if (eval "\$path =~ s,$pattern,$result,") {
-      warn "path is now: $path\n";
+      #warn "path is now: $path\n";
     }
   }
   return $path;
