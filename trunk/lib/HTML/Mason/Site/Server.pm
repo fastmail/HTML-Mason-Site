@@ -119,7 +119,7 @@ statically.
 
 sub _handle_static {
   my ($self, $filename, $content_type) = @_;
-  print STDERR "static: $filename\n";
+  #print STDERR "static: $filename\n";
   my $content = io("$filename")->all;
   print "HTTP/1.1 200 OK\n";
   print "Content-type: $content_type\n";
