@@ -34,7 +34,7 @@ my @STD_MODULES = (
 );
 
 my @STD_CTYPES = (
-  { is  => qr!^text/! },
+  qr!^text/!,
   { not => qr!php! },
 );
 

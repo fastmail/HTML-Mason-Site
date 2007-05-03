@@ -1,0 +1,11 @@
+handler:
+  # comp_root: (filled in by test)
+  # data_dir:  (filled in by test)
+  # no sessions
+  error_mode:   'fatal'
+  decline_dirs: 0
+  
+# to test:
+# error_page
+# rewrite
+
