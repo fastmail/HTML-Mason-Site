@@ -14,6 +14,7 @@ use File::Basename ();
 use Scalar::Util ();
 use CGI::Cookie ();
 use Object::Array;
+use File::Spec;
 
 # fatalsToBrowser isn't working for some reason
 use CGI::Carp;
@@ -65,6 +66,20 @@ sub new {
   # a YAML file location
   $self->config($self->config) unless ref $self->config;
   $self->{name} ||= delete $self->config->{name};
+
+  # absolutize file names -- tedious, but less tedious to do it here than
+  # elsewhere
+  my $comp_root = $self->config->{handler}->{comp_root};
+  if (ref $comp_root eq 'ARRAY') {
+    $_->[1] = File::Spec->rel2abs($_->[1]) for @$comp_root;
+  } else {
+    $self->config->{handler}->{comp_root} = File::Spec->rel2abs($comp_root);
+  }
+
+  $self->config->{handler}->{data_dir} = File::Spec->rel2abs(
+    $self->config->{handler}->{data_dir}
+  );
+
   return $self;
 }
 
