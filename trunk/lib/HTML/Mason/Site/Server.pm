@@ -138,7 +138,9 @@ sub handle_request {
   my ($cgi) = @_;
 
   $self->content_type(undef);
-
+  # this should probably be done by HTTP::Server::Simple, but... workaround for
+  # now
+  $cgi->path_info(URI::Escape::uri_unescape($cgi->path_info));
   
   my $path = $self->site->rewrite_path($cgi->path_info);
   $cgi->path_info($path);
