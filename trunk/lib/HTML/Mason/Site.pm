@@ -256,7 +256,10 @@ sub require_modules {
   my $self = shift;
   for my $module (@STD_MODULES, @{ $self->config->{modules} }) {
     #print STDERR "requiring $module->{name}\n";
-    $module->{name}->require;
+    $module->{name}->require or do {
+      warn $@;
+      next;
+    };
     next if $module->{no_import};
     my @args = @{ $module->{args} };
     _command_import($module->{name}, @args);
