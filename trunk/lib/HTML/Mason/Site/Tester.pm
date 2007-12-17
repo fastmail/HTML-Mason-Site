@@ -47,6 +47,13 @@ into HTML::Mason::Site-E<gt>new.
 
 Make a request for the given path.  Returns a HTTP::Response object.
 
+=head2 request_ascgi
+
+  my $as_cgi = $tester->request_ascgi($request);
+
+Returns a HTTP::Request::AsCGI object for the given HTTP::Request.  Override
+this in subclasses.
+
 =head2 get
 
   my $content = $tester->get('/foo?bar=1');
@@ -86,12 +93,17 @@ sub _request_from_url {
   return HTTP::Request->new( GET => $url );
 }
 
+sub request_ascgi {
+  my $self = shift;
+  return HTTP::Request::AsCGI->new(@_);
+}
+
 sub _local_request {
   my ($self, $request) = @_;
   my $uri = $request->uri;
   $uri->path($self->{site}->rewrite_path($uri->path));
 
-  my $c = HTTP::Request::AsCGI->new( $request );
+  my $c = $self->request_ascgi($request);
   $c->stderr(IO::File->new_tmpfile)
     unless $ENV{HTML_MASON_SITE_TESTER_DEBUG};
   $c->setup;
