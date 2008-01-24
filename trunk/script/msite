@@ -101,7 +101,12 @@ if ($opt->{comp_root}) {
 if ($opt->{local_cookie_domain}) {
   $site->mason_config({ session_cookie_domain => $hostname });
 }
-my $server = HTML::Mason::Site::Server->new($opt->{port});
+
+my $server = HTML::Mason::Site::Server->new(
+  $opt->{port},
+  { alarm => 600 },
+);
+
 if ($opt->{ssl}) {
   $opt->{ssl_port} ||= int($opt->{port} / 100) * 100 + 43;
   if ($opt->{ssl_gen_cert}) {

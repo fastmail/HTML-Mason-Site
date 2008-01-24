@@ -27,6 +27,16 @@ BEGIN {
   );
 }
 
+sub new {
+  my ($class, $port, $arg) = @_;
+  my $self = $class->SUPER::new($port);
+
+  $self->{__PACKAGE__}{alarm} = $arg->{alarm} || 0;
+  alarm $self->{__PACKAGE__}{alarm};
+
+  return $self;
+}
+
 =head1 NAME
 
 HTML::Mason::Site::Server
@@ -137,6 +147,8 @@ sub handle_request {
   my $self = shift;
   my ($cgi) = @_;
 
+  alarm 0;
+
   $self->content_type(undef);
   # this should probably be done by HTTP::Server::Simple, but... workaround for
   # now
@@ -172,6 +184,7 @@ sub handle_request {
     
     if ($static_ok->($content_type)) {
       $self->_handle_static($filename, $content_type);
+      alarm($self->{'HTML::Mason::Site::Server'}{alarm} || 0);
       return;
     }
     last;
@@ -197,6 +210,7 @@ sub handle_request {
 
   # $self->cleanup
   # return values are not meaningful
+  alarm($self->{'HTML::Mason::Site::Server'}{alarm} || 0);
 }
 
 =head2 handle_error
