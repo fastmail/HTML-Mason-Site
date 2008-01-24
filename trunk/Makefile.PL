@@ -10,7 +10,8 @@ all_from;
 
 build_requires 'Test::More' => 0;
 
-requires 'HTML::Mason'                 => '1.34'; # get_server_port
+# XXX: we're patched locally -- rjbs, 2008-01-24
+# requires 'HTML::Mason'                 => '1.34'; # get_server_port
 requires 'YAML::Syck'                  => 0;
 requires 'Getopt::Long::Descriptive'   => 0;
 requires 'Object::Array'               => 0;
