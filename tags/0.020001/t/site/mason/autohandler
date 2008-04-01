@@ -1,0 +1,5 @@
+<html>
+<body>
+% $m->call_next;
+</body>
+</html>
