@@ -45,11 +45,11 @@ HTML::Mason::Site - encapsulate per-site Mason handlers
 
 =head1 VERSION
 
-version 0.020001000
+version 0.020001
 
 =cut
 
-our $VERSION = '0.020001000';
+our $VERSION = '0.020001';
 
 =head1 SYNOPSIS
 
