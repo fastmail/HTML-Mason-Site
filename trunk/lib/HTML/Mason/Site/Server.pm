@@ -90,8 +90,10 @@ sub handler_class { 'HTML::Mason::Site::FakeApacheHandler' }
 
 # this unfortunateness is to make MasonX::Request::WithApacheSession choose
 # the right superclass
-$HTML::Mason::ApacheHandler::VERSION = 0;
-$HTML::Mason::CGIHandler::VERSION = 1;
+$HTML::Mason::ApacheHandler::VERSION
+  = 0;
+$HTML::Mason::CGIHandler::VERSION
+  = 1;
 
 =head2 new_handler
 
