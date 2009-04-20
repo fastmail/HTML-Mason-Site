@@ -43,13 +43,9 @@ my @STD_CTYPES = (
 
 HTML::Mason::Site - encapsulate per-site Mason handlers
 
-=head1 VERSION
-
-version 0.020002
-
 =cut
 
-our $VERSION = '0.020002';
+our $VERSION = '0.020003';
 
 =head1 SYNOPSIS
 
