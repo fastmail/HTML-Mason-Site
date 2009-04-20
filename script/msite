@@ -104,7 +104,7 @@ if ($opt->{local_cookie_domain}) {
 
 my $server = HTML::Mason::Site::Server->new(
   $opt->{port},
-  { alarm => 600 },
+  # { alarm => 600 },
 );
 
 if ($opt->{ssl}) {
