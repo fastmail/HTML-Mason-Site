@@ -19,5 +19,4 @@ requires 'Apache::Session::Wrapper'    => 0.29; # fixes blocking bug
 #requires 'HTTP::Server::Simple::Mason' => '0.09';
 
 install_script 'script/msite';
-auto_install;
 WriteAll;
