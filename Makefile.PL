@@ -10,6 +10,7 @@ all_from;
 
 build_requires 'Test::More' => 0;
 
+requires 'Class::Accessor'             => 0;
 requires 'HTML::Mason'                 => '1.34'; # get_server_port
 requires 'YAML::Syck'                  => 0;
 requires 'Getopt::Long::Descriptive'   => 0;
