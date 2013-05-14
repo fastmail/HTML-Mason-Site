@@ -6,7 +6,6 @@ use 5.006001;
 
 use base qw(Class::Accessor);
 
-use UNIVERSAL::require;
 use NEXT;
 use YAML::Syck ();
 use IO::All;
@@ -45,7 +44,7 @@ HTML::Mason::Site - encapsulate per-site Mason handlers
 
 =cut
 
-our $VERSION = '0.020003';
+our $VERSION = '0.020004';
 
 =head1 SYNOPSIS
 
@@ -252,7 +251,7 @@ sub require_modules {
   my $self = shift;
   for my $module (@STD_MODULES, @{ $self->config->{modules} }) {
     #print STDERR "requiring $module->{name}\n";
-    $module->{name}->require or do {
+    eval "require $module->{name}; 1" or do {
       warn $@;
       next;
     };
