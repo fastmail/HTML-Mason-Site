@@ -43,7 +43,7 @@ HTML::Mason::Site - encapsulate per-site Mason handlers
 
 =cut
 
-our $VERSION = '0.020005';
+our $VERSION = '0.020006';
 
 =head1 SYNOPSIS
 
