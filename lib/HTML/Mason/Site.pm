@@ -8,7 +8,6 @@ use base qw(Class::Accessor);
 
 use NEXT;
 use YAML::Syck ();
-use IO::All;
 use File::Basename ();
 use Scalar::Util ();
 use CGI::Cookie ();
@@ -90,7 +89,7 @@ sub config {
     my $arg = shift;
     if (! ref $arg && -f $arg) {
       my $name = $arg;
-      $arg = YAML::Syck::Load(io($arg)->all);
+      $arg = YAML::Syck::LoadFile($arg);
       $arg->{name} = File::Basename::basename($name, ".yml");
     }
     $arg = $self->_canonical_config($arg);

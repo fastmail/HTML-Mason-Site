@@ -10,7 +10,6 @@ use HTML::Mason::Site::Server;
 use File::Temp qw(tempdir);
 use File::Spec;
 use Sys::Hostname::Long;
-use IO::All;
 use Fatal qw(unlink mkdir);
 
 my @orig_ARGV = @ARGV;
@@ -122,7 +121,8 @@ if ($opt->{ssl}) {
     if (-e "$ssl_dir/ssl.cnf") {
       print STDERR "using existing ssl.cnf: $ssl_dir/ssl.cnf\n";
     } else {
-      io("$ssl_dir/ssl.cnf")->print(<<"END");
+      open my $fh, '>', "$ssl_dir/ssl.cnf" or die "can't open crt: $!";
+      print {$fh} <<"END";
 [ req ]
 prompt = no
 distinguished_name = req_dn
@@ -131,6 +131,7 @@ default_bits = 2048
 [ req_dn ]
 CN=$hostname
 END
+      close $fh or die "error closing cert file: $!";
     }
     if (-e "$ssl_dir/server.crt" && -e "$ssl_dir/server.key") {
       print STDERR "using existing server.crt and server.key\n";

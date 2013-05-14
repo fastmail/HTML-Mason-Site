@@ -10,8 +10,6 @@ use base qw(HTTP::Server::Simple::Mason
 # HTTP::Server::Simple does not fully load (?!)
 require HTTP::Server::Simple;
 
-use IO::All;
-
 use File::Modified;
 use File::Find::Rule;
 
@@ -132,7 +130,11 @@ statically.
 sub _handle_static {
   my ($self, $filename, $content_type) = @_;
   #print STDERR "static: $filename\n";
-  my $content = io("$filename")->all;
+  my $content = do {
+    local $/;
+    open my $fh, '<', $filename or die "can't open $filename: $!";
+    <$fh>;
+  };
   print "HTTP/1.1 200 OK\n";
   print "Content-type: $content_type\n";
   print "Content-length: " . length($content) . "\n\n";
