@@ -16,6 +16,7 @@ requires 'File::Find::Rule'            => 0;
 requires 'File::Modified'              => 0;
 requires 'File::MMagic'                => 0;
 requires 'HTML::Mason'                 => '1.34'; # get_server_port
+requires 'HTML::Mason::FakeApacheHandler' => 0;
 requires 'YAML::Syck'                  => 0;
 requires 'Getopt::Long::Descriptive'   => 0;
 requires 'MIME::Types'                 => 0;
